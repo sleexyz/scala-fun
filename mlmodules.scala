@@ -1,24 +1,33 @@
 object TypeclassStyle extends App {
-
   trait Monoid[A] {
     def zero:A
     def append (a:A, b:A) : A
   }
-  object Monoid {
-
-    implicit object AdditiveInt extends Monoid[Int] {
-      def zero = 0
-      def append (a:Int, b:Int) = a + b
-    }
-
+  implicit object AdditiveInt extends Monoid[Int] {
+    def zero = 0
+    def append (a:Int, b:Int) = a + b
   }
+
+
   object MultiplicativeInt extends Monoid[Int] {
     def zero = 1
     def append(a:Int, b:Int) = a * b
   }
 
+
+  class Semiring[A](additive: Monoid[A], multiplicative: Monoid[A]) {
+    def zero = additive.zero
+    def one = multiplicative.zero
+    def add(a:A, b:A) = additive.append(a, b)
+    def mul(a:A, b:A) = multiplicative.append(a, b)
+  }
+
+  object MyRing extends Semiring[Int](AdditiveInt, MultiplicativeInt)
+
+
   def foo (implicit ev : Monoid[Int]) : Int = {
-    ev.zero
+    import ev._
+    zero
   }
 
 }
@@ -41,6 +50,11 @@ object ModuleStyle {
 
     }
   }
+  object StringMonoid extends Monoid {
+    type T = String
+    def zero = ""
+    def append(a:String, b:String) = a + b
+  }
 
   object AdditiveInt extends Monoid {
     type T = Int
@@ -55,19 +69,15 @@ object ModuleStyle {
   }
 
 
-  // swag swag swag swag 
-
   class Cayley[A <: Monoid](val a: A) extends Monoid{
     type T = (a.T => a.T)
     def zero = (x: a.T) => a.append(x , a.zero)
-    // def zero = (x: a.T) => x
     def append (f: T, g: T) = (x: a.T) => g (f(x))
   }
 
   object CayleyAdditive extends Cayley(AdditiveInt)
 
 
-  // How do I constrain that A#T and B#T are equal?
   class Semiring [A <: Monoid, B <: Monoid] (val a: A, val b: B) (implicit ev : A#T =:= B#T){
     type T = a.T
     def zero : T = a.zero
@@ -75,11 +85,6 @@ object ModuleStyle {
   }
 
   object MyRing extends Semiring(AdditiveInt, MultiplicativeInt)
-
-  // def foobar : Int
-
-
-
 
 
 
@@ -92,6 +97,13 @@ object ModuleStyle {
 
     zero
   }
+
+  def testExistential = {
+    val monoids = Seq(StringMonoid, AdditiveInt, MultiplicativeInt, CayleyAdditive) map (x => x.append (x.zero,x.zero))
+    monoids
+  }
+
+
 
 }
 
